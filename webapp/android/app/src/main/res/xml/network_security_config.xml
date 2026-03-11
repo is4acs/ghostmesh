@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Config réseau : HTTPS uniquement, pas de cleartext.
+  Compatible GrapheneOS qui durcit la politique réseau par défaut.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Autorités de certification système uniquement (pas de CA utilisateur) -->
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
