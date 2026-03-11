@@ -259,10 +259,12 @@ export function ChatApp({ roomId, role, secure, adminInfo, onBack }: Props) {
                       style={{ background: chat.ringAcked ? `${ORANGE}22` : "transparent", color: chat.ringAcked ? ORANGE : "#555", border: `1px solid ${chat.ringAcked ? ORANGE + "66" : "#2a2a2a"}`, borderRadius: "4px", padding: "0 10px", height: "28px", fontFamily: FONT, fontSize: "13px", cursor: chat.ringAcked ? "not-allowed" : "pointer", flex: 1, animation: chat.ringAcked ? "ringGlow .8s infinite" : "none" }}
                     >🔔</button>
                   )}
-                  <button
-                    onClick={role === "admin" ? handleAdminEnd : () => { chat.end(); onBack(); }}
-                    style={{ background: "transparent", color: RED, border: `1px solid ${RED}55`, borderRadius: "4px", padding: "0 10px", height: "28px", fontFamily: FONT, fontSize: "10px", cursor: "pointer", letterSpacing: "0.08em", flex: 1 }}
-                  >FIN</button>
+                  {role === "admin" && (
+                    <button
+                      onClick={handleAdminEnd}
+                      style={{ background: "transparent", color: RED, border: `1px solid ${RED}55`, borderRadius: "4px", padding: "0 10px", height: "28px", fontFamily: FONT, fontSize: "10px", cursor: "pointer", letterSpacing: "0.08em", flex: 1 }}
+                    >FIN</button>
+                  )}
                 </div>
               </div>
             </div>

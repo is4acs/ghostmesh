@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChatApp } from "./ui/ChatApp";
 import { AdminLogin } from "./ui/AdminLogin";
 import { AdminDashboard } from "./ui/AdminDashboard";
-import { ACCENT, BG, BG2, BG3, FONT, errorBoxStyle } from "./theme";
+import { ACCENT, BG, BG2, BG3, FONT, ORANGE, errorBoxStyle } from "./theme";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -78,23 +78,18 @@ export default function App() {
       onJoin={(roomId, secure) =>
         setScreen({ type: "client_chat", roomId, secure })
       }
-      onAdminClick={() => setScreen({ type: "admin_login" })}
     />
   );
 }
 
 // ─── Client Landing ───────────────────────────────────────────────────────────
 
-function ClientLanding({
-  onJoin,
-  onAdminClick,
-}: {
-  onJoin: (roomId: string, secure: boolean) => void;
-  onAdminClick: () => void;
-}) {
+function ClientLanding({ onJoin }: { onJoin: (roomId: string, secure: boolean) => void }) {
   const [codeInput, setCodeInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+  // Attend confirmation avant d'entrer dans une session insecure
+  const [pendingInsecure, setPendingInsecure] = useState<{ roomId: string } | null>(null);
 
   const handleConnect = async () => {
     const code = codeInput.trim();
@@ -108,9 +103,14 @@ function ClientLanding({
         body: JSON.stringify({ code }),
       });
       if (res.status === 403) { setError("Code invalide"); setLoading(false); return; }
-      if (!res.ok) { setError("Serveur inaccessible"); setLoading(false); return; }
+      if (!res.ok)            { setError("Serveur inaccessible"); setLoading(false); return; }
       const data = await res.json() as { roomId: string; secure: boolean };
-      onJoin(data.roomId, data.secure);
+      if (!data.secure) {
+        // Intercepter : afficher l'avertissement avant d'entrer dans le chat
+        setPendingInsecure({ roomId: data.roomId });
+      } else {
+        onJoin(data.roomId, true);
+      }
     } catch {
       setError("Connexion impossible");
     } finally {
@@ -118,6 +118,59 @@ function ClientLanding({
     }
   };
 
+  // ── Écran avertissement session insecure ───────────────────────────────────
+  if (pendingInsecure) {
+    return (
+      <div style={{
+        background: BG, fontFamily: FONT, minHeight: "100vh",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", padding: "24px",
+      }}>
+        <div style={{ width: "100%", maxWidth: "380px", display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ textAlign: "center", color: ACCENT, fontSize: "22px", letterSpacing: "0.2em", fontWeight: "bold" }}>
+            ⬡ GHOSTMESH
+          </div>
+          <div style={{
+            background: "#1a0e00", border: `1px solid ${ORANGE}44`,
+            borderRadius: "10px", padding: "28px",
+            display: "flex", flexDirection: "column", gap: "18px", alignItems: "center",
+          }}>
+            <div style={{ fontSize: "32px" }}>⚠</div>
+            <div style={{ color: ORANGE, fontSize: "13px", fontWeight: "bold", letterSpacing: "0.12em" }}>
+              SESSION NON SÉCURISÉE
+            </div>
+            <div style={{ color: "#886633", fontSize: "11px", lineHeight: "1.8", textAlign: "center" }}>
+              Vous utilisez un code d'accès général.<br />
+              Votre identité ne peut pas être vérifiée.<br />
+              Cette conversation n'est pas confidentielle.
+            </div>
+            <button
+              onClick={() => onJoin(pendingInsecure.roomId, false)}
+              style={{
+                background: ORANGE, color: BG, border: "none", borderRadius: "4px",
+                padding: "14px 24px", fontFamily: FONT, fontSize: "13px",
+                fontWeight: "bold", cursor: "pointer", letterSpacing: "0.1em", width: "100%",
+              }}
+            >
+              CONTINUER QUAND MÊME
+            </button>
+            <button
+              onClick={() => setPendingInsecure(null)}
+              style={{
+                background: "transparent", color: "#555", border: "1px solid #2a2a2a",
+                borderRadius: "4px", padding: "10px", fontFamily: FONT,
+                fontSize: "11px", cursor: "pointer", letterSpacing: "0.1em", width: "100%",
+              }}
+            >
+              ANNULER
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Écran principal ────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -143,36 +196,23 @@ function ClientLanding({
         button:hover { opacity: 0.85; }
       `}</style>
       <div style={{
-        background: BG,
-        fontFamily: FONT,
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
+        background: BG, fontFamily: FONT, minHeight: "100vh",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", padding: "24px",
       }}>
         <div style={{ width: "100%", maxWidth: "380px", display: "flex", flexDirection: "column", gap: "28px" }}>
 
-          {/* Logo */}
+          {/* Logo — sans sous-titre */}
           <div style={{ textAlign: "center" }}>
             <div style={{ color: ACCENT, fontSize: "22px", letterSpacing: "0.2em", fontWeight: "bold" }}>
               ⬡ GHOSTMESH
-            </div>
-            <div style={{ color: "#2a2a2a", fontSize: "10px", letterSpacing: "0.15em", marginTop: "6px" }}>
-              MESSAGERIE CHIFFRÉE · E2E · P2P
             </div>
           </div>
 
           {/* Code input */}
           <div style={{
-            background: BG2,
-            border: "1px solid #1a1a1a",
-            borderRadius: "10px",
-            padding: "24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
+            background: BG2, border: "1px solid #1a1a1a", borderRadius: "10px",
+            padding: "24px", display: "flex", flexDirection: "column", gap: "16px",
           }}>
             <div style={{ color: "#555", fontSize: "10px", letterSpacing: "0.15em" }}>
               CODE D'ACCÈS
@@ -190,23 +230,13 @@ function ClientLanding({
               }}
               onKeyDown={(e) => { if (e.key === "Enter") handleConnect(); }}
             />
-            <div style={{ color: "#333", fontSize: "10px", textAlign: "center" }}>
-              Entrez le code fourni par votre vendeur (JJMMAAAA)
-            </div>
             <button
               onClick={handleConnect}
               disabled={loading}
               style={{
-                background: ACCENT,
-                color: BG,
-                border: "none",
-                borderRadius: "4px",
-                padding: "14px",
-                fontFamily: FONT,
-                fontSize: "13px",
-                fontWeight: "bold",
-                cursor: loading ? "not-allowed" : "pointer",
-                letterSpacing: "0.1em",
+                background: ACCENT, color: BG, border: "none", borderRadius: "4px",
+                padding: "14px", fontFamily: FONT, fontSize: "13px", fontWeight: "bold",
+                cursor: loading ? "not-allowed" : "pointer", letterSpacing: "0.1em",
                 opacity: loading ? 0.6 : 1,
               }}
             >
@@ -215,28 +245,8 @@ function ClientLanding({
           </div>
 
           {error && <div style={errorBoxStyle()}>{error}</div>}
-
-          {/* Admin link */}
-          <div style={{ textAlign: "center" }}>
-            <button
-              onClick={onAdminClick}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "#2a2a2a",
-                fontSize: "10px",
-                cursor: "pointer",
-                fontFamily: FONT,
-                letterSpacing: "0.1em",
-                textDecoration: "underline",
-              }}
-            >
-              accès admin
-            </button>
-          </div>
         </div>
       </div>
     </>
   );
 }
-
