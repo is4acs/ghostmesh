@@ -1,0 +1,14 @@
+{
+  "name": "ghostmesh",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm ci --prefix webapp && npm run build --prefix webapp",
+    "start": "npm ci --prefix server --omit=dev && node --experimental-strip-types server/index.ts",
+    "dev:server": "npm run dev --prefix server",
+    "dev:webapp": "npm run dev --prefix webapp"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

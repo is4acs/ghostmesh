@@ -1,0 +1,15 @@
+{
+  "name": "ghostmesh-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types index.ts",
+    "dev": "node --watch --experimental-strip-types index.ts"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.13"
+  }
+}

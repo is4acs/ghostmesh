@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GhostMesh — Test local</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #070707;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      font-family: 'Courier New', Courier, monospace;
+      overflow: hidden;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0a0a0a;
+      border-bottom: 1px solid #1a1a1a;
+      padding: 0 20px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+    .topbar-brand {
+      color: #C8FF00;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.2em;
+    }
+    .topbar-hint {
+      color: #2a2a2a;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+    }
+
+    /* ── Split panes ── */
+    .panes {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .pane-label {
+      background: #0f0f0f;
+      border-bottom: 1px solid #1a1a1a;
+      padding: 5px 14px;
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pane-label .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .pane-client .pane-label { color: #C8FF00; }
+    .pane-client .dot        { background: #C8FF00; }
+
+    .pane-admin .pane-label  { color: #FF9500; }
+    .pane-admin .dot         { background: #FF9500; }
+
+    iframe {
+      flex: 1;
+      border: none;
+      width: 100%;
+      min-height: 0;
+    }
+
+    .divider {
+      width: 1px;
+      background: #1a1a1a;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="topbar-brand">⬡ GHOSTMESH — TEST LOCAL</span>
+    <span class="topbar-hint">TOKEN ADMIN : GHOST_ADMIN · CODE INSECURE : 00000</span>
+  </div>
+
+  <div class="panes">
+    <!-- Client side -->
+    <div class="pane pane-client">
+      <div class="pane-label">
+        <span class="dot"></span>
+        CLIENT
+      </div>
+      <iframe src="/" title="Client"></iframe>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Admin / Vendeur side -->
+    <div class="pane pane-admin">
+      <div class="pane-label">
+        <span class="dot"></span>
+        VENDEUR — ADMIN
+      </div>
+      <iframe src="/admin" title="Admin"></iframe>
+    </div>
+  </div>
+</body>
+</html>
