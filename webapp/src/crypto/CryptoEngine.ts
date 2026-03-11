@@ -82,6 +82,21 @@ export async function decrypt(
   return new TextDecoder().decode(plain);
 }
 
+// ─── Base64 helpers (WS relay transport — no external deps) ──────────────────
+
+export function toBase64(arr: Uint8Array): string {
+  let b = "";
+  for (let i = 0; i < arr.length; i++) b += String.fromCharCode(arr[i]);
+  return btoa(b);
+}
+
+export function fromBase64(str: string): Uint8Array<ArrayBuffer> {
+  const raw = atob(str);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out as Uint8Array<ArrayBuffer>;
+}
+
 // Build a binary frame: [1 byte type][payload]
 export function buildFrame(type: number, payload: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> {
   const frame = new Uint8Array(1 + payload.length);

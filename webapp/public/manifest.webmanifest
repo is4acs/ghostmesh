@@ -1,0 +1,35 @@
+{
+  "name": "GhostMesh",
+  "short_name": "GhostMesh",
+  "description": "Messagerie chiffrée éphémère E2E P2P",
+  "theme_color": "#070707",
+  "background_color": "#070707",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Espace Admin",
+      "short_name": "Admin",
+      "url": "/admin",
+      "description": "Accès vendeur"
+    }
+  ]
+}

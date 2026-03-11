@@ -67,12 +67,13 @@ interface Peer {
 }
 
 interface Room {
-  peers: Map<string, Peer>;
-  timer: ReturnType<typeof setTimeout>;
-  secure: boolean;
-  clientCode: string;
+  peers:        Map<string, Peer>;
+  timer:        ReturnType<typeof setTimeout>;
+  secure:       boolean;
+  clientCode:   string;
   clientLabel?: string;
-  createdAt: number;
+  createdAt:    number;
+  wsMode:       boolean; // true when WebRTC failed → peers use WS relay
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -229,7 +230,7 @@ const httpServer = createServer((req, res) => {
       const roomId = genRoomId();
       const timer = setTimeout(() => destroyRoom(roomId), TTL_MS);
       const createdAt = Date.now();
-      rooms.set(roomId, { peers: new Map(), timer, secure, clientCode: code, clientLabel: label, createdAt });
+      rooms.set(roomId, { peers: new Map(), timer, secure, clientCode: code, clientLabel: label, createdAt, wsMode: false });
 
       notifyAdmin({ type: "client_waiting", roomId, code, secure, label, createdAt });
 
@@ -360,6 +361,25 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage, context: string) => {
         return;
       }
 
+      // WS relay fallback: a peer signals that WebRTC/UDP is unavailable.
+      // Switch the room to WS relay mode and notify ALL peers with their role.
+      // Subsequent ws_pubkey / ws_msg / ws_bye messages flow through the
+      // catch-all broadcast below — the server forwards ciphertext opaquely.
+      if (parsed.type === "ws_start" && !room.wsMode) {
+        room.wsMode = true;
+        const peerIds = Array.from(room.peers.keys()); // insertion order = join order
+        for (const [pid, peer] of room.peers) {
+          if (peer.ws.readyState === WebSocket.OPEN) {
+            peer.ws.send(JSON.stringify({
+              type:        "ws_mode",
+              isInitiator: pid === peerIds[0], // first-joined peer initiates ECDH
+            }));
+          }
+        }
+        return;
+      }
+
+      // Generic relay (SDP, ICE, ws_pubkey, ws_msg, ws_bye, …)
       parsed._from = peerId;
       broadcast(roomId, JSON.stringify(parsed), peerId);
     } catch {}
