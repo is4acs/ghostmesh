@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "npm ci --include=dev --prefix webapp && npm run build --prefix webapp",
+    "build": "npm ci --include=dev --legacy-peer-deps --prefix webapp && npm run build --prefix webapp",
     "start": "npm ci --omit=dev --prefix server && node --experimental-strip-types server/index.ts",
     "dev:server": "npm run dev --prefix server",
     "dev:webapp": "npm run dev --prefix webapp"
