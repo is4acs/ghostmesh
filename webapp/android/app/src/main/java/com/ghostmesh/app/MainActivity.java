@@ -12,35 +12,27 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // Récupère la WebView de Capacitor et configure-la pour WebRTC
-        // et Web Crypto API (requis par GhostMesh E2E)
-        WebView webView = getBridge().getWebView();
-        configureWebView(webView);
+        configureWebView(getBridge().getWebView());
     }
 
     private void configureWebView(WebView webView) {
         WebSettings settings = webView.getSettings();
 
-        // Indispensable pour WebRTC (getUserMedia, RTCPeerConnection)
+        // WebRTC + Web Crypto API
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
 
-        // Sécurité : HTTPS uniquement
+        // HTTPS uniquement
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
 
-        // Performance
-        settings.setHardwareAccelerated(true);
+        // Cache normal
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
-        // Autorise WebRTC à accéder au micro sans pop-up système répété
+        // Auto-accorder les permissions WebRTC (micro) déclarées dans le manifest
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
-                // Accorde automatiquement les permissions WebRTC déclarées
-                // dans le manifest (RECORD_AUDIO).
-                // L'utilisateur a déjà accordé la permission au niveau OS.
                 request.grant(request.getResources());
             }
         });
