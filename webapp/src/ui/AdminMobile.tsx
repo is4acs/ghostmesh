@@ -312,6 +312,36 @@ export function AdminDashboardMobile({ token, onJoinSession }: DashboardProps) {
   const newClients = useMemo(() => adm.notifs.filter(n => n.type === "client_waiting").length, [adm.notifs]);
   const totalAlerts = urgentRings + newClients;
 
+  // ── Push notifications ────────────────────────────────────────────────────
+  const prevNotifsLen = useRef(0);
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, []);
+  useEffect(() => {
+    const prev = prevNotifsLen.current;
+    prevNotifsLen.current = adm.notifs.length;
+    if (adm.notifs.length <= prev) return;
+    const newest = adm.notifs[0];
+    if (!newest || !("Notification" in window) || Notification.permission !== "granted") return;
+    if (newest.type === "client_waiting") {
+      new Notification("GhostMesh — Nouveau client", {
+        body: `${newest.label ?? newest.code} initie une session`,
+        icon: "/icons/icon.svg",
+        tag: newest.roomId,
+        silent: false,
+      });
+    } else if (newest.type === "client_ring") {
+      new Notification("GhostMesh — Appel entrant", {
+        body: `${newest.label ?? newest.code} sonne`,
+        icon: "/icons/icon.svg",
+        tag: newest.roomId + "-ring",
+        silent: false,
+      });
+    }
+  }, [adm.notifs]);
+
   const handleCreateCode = useCallback(async () => {
     const code = newCode.trim();
     if (!/^\d{8}$/.test(code)) { setCodeError("Format : JJMMAAAA (8 chiffres)"); return; }
