@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useGhostChat } from "../hooks/useGhostChat";
 import {
   ACCENT, BG, BG2, BG3, RED, ORANGE, FONT,
-  formatTime, copyToClipboard, errorBoxStyle, badgeStyle,
+  formatTime, copyToClipboard, errorBoxStyle, badgeStyle, API_BASE,
 } from "../theme";
 
 // ─── Status maps (module-level: allocated once) ───────────────────────────────
@@ -85,7 +85,7 @@ export function ChatApp({ roomId, role, secure, adminInfo, onBack }: Props) {
   const handleAdminEnd = useCallback(async () => {
     if (!adminInfo?.token) return;
     try {
-      await fetch("/admin/end-session", {
+      await fetch(`${API_BASE}/admin/end-session`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

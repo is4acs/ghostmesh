@@ -66,8 +66,13 @@ export const TTL_MS            = 10 * 60 * 1_000; // must match server
 
 // ─── Shared Utilities ─────────────────────────────────────────────────────────
 
-/** Build a ws:// / wss:// URL that respects the current protocol. */
+// APK (Capacitor) loads from https://localhost → point API to Railway
+const IS_NATIVE = typeof location !== "undefined" && location.hostname === "localhost";
+export const API_BASE = IS_NATIVE ? "https://ghostmesh-production.up.railway.app" : "";
+
+/** Build a ws:// / wss:// URL pointing to the correct host. */
 export function wsUrl(path: string): string {
+  if (IS_NATIVE) return `wss://ghostmesh-production.up.railway.app${path}`;
   const proto = location.protocol === "https:" ? "wss" : "ws";
   return `${proto}://${location.host}${path}`;
 }

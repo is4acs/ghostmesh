@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { wsUrl, playBell, NOTIF_CAP } from "../theme";
+import { wsUrl, playBell, NOTIF_CAP, API_BASE } from "../theme";
 
 export interface AdminSession {
   roomId: string;
@@ -63,10 +63,10 @@ export function useAdminSocket(token: string): AdminSocketState {
 
     // Parallel initial seed via REST (resilient to WS timing issues)
     Promise.all([
-      fetch("/admin/sessions", { headers, signal })
+      fetch(`${API_BASE}/admin/sessions`, { headers, signal })
         .then((r) => r.json())
         .then((d) => { if (!unmounted.current) setSessions(d.sessions ?? []); }),
-      fetch("/admin/codes", { headers, signal })
+      fetch(`${API_BASE}/admin/codes`, { headers, signal })
         .then((r) => r.json())
         .then((d) => { if (!unmounted.current) setCodes(d.codes ?? []); }),
     ]).catch(() => { /* aborted or network error — WS will fill in */ });
@@ -189,7 +189,7 @@ export function useAdminSocket(token: string): AdminSocketState {
   }, []);
 
   const createCode = useCallback(async (code: string, label: string) => {
-    const res = await fetch("/admin/codes", {
+    const res = await fetch(`${API_BASE}/admin/codes`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders(token) },
       body: JSON.stringify({ code, label }),
@@ -206,7 +206,7 @@ export function useAdminSocket(token: string): AdminSocketState {
   }, [token]);
 
   const deleteCode = useCallback(async (code: string) => {
-    await fetch(`/admin/codes/${code}`, {
+    await fetch(`${API_BASE}/admin/codes/${code}`, {
       method: "DELETE",
       headers: authHeaders(token),
     }).catch(() => {});

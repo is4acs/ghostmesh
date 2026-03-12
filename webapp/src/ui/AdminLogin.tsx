@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ACCENT, BG, BG2, BG3, FONT, errorBoxStyle } from "../theme";
+import { ACCENT, BG, BG2, BG3, FONT, errorBoxStyle, API_BASE } from "../theme";
 
 interface Props {
   onLogin: (token: string) => void;
@@ -15,7 +15,7 @@ export function AdminLogin({ onLogin }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/admin/auth", {
+      const res = await fetch(`${API_BASE}/admin/auth`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: token.trim() }),

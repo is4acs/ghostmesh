@@ -5,7 +5,7 @@ import { useGhostChat } from "../hooks/useGhostChat";
 import {
   ACCENT, BG, BG2, BG3, RED, ORANGE, FONT,
   formatTime, formatCountdown, copyToClipboard, TTL_MS,
-  SAFE_AREA_TOP, SAFE_AREA_BOTTOM,
+  SAFE_AREA_TOP, SAFE_AREA_BOTTOM, API_BASE,
 } from "../theme";
 
 // ─── Global Styles ────────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ export function AdminLoginMobile({ onLogin }: LoginProps) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/admin/auth", {
+      const res = await fetch(`${API_BASE}/admin/auth`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: t }),
@@ -917,7 +917,7 @@ export function AdminChatMobile({ roomId, token, clientCode, clientLabel, secure
 
   const handleEnd = useCallback(async () => {
     try {
-      await fetch("/admin/end-session", {
+      await fetch(`${API_BASE}/admin/end-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ roomId }),

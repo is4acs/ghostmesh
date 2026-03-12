@@ -3,7 +3,7 @@ import { AdminLoginMobile, AdminDashboardMobile, AdminChatMobile } from "./ui/Ad
 import { ChatApp } from "./ui/ChatApp";
 import { AdminLogin } from "./ui/AdminLogin";
 import { AdminDashboard } from "./ui/AdminDashboard";
-import { ACCENT, BG, BG2, BG3, FONT, ORANGE, errorBoxStyle } from "./theme";
+import { ACCENT, BG, BG2, BG3, FONT, ORANGE, errorBoxStyle, API_BASE } from "./theme";
 import type { AdminSession } from "./hooks/useAdminSocket";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -147,7 +147,7 @@ function ClientLanding({ onJoin }: { onJoin: (roomId: string, secure: boolean) =
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/client/join", {
+      const res = await fetch(`${API_BASE}/client/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code }),
