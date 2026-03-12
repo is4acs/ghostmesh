@@ -5,6 +5,8 @@ import { readFileSync, existsSync, statSync } from "fs";
 import { join, extname, dirname } from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getMessaging } from "firebase-admin/messaging";
 
 const PORT = Number(process.env.PORT ?? 3000);
 
@@ -19,6 +21,42 @@ const db = SUPABASE_URL && SUPABASE_KEY
 
 if (!db) {
   console.warn("⚠  Supabase non configuré — stockage en mémoire uniquement");
+}
+
+// ─── Firebase FCM ──────────────────────────────────────────────────────────────
+const FIREBASE_SA = process.env.FIREBASE_SERVICE_ACCOUNT ?? "";
+let fcmMessaging: ReturnType<typeof getMessaging> | null = null;
+if (FIREBASE_SA) {
+  try {
+    const sa = JSON.parse(FIREBASE_SA);
+    const app = getApps().length === 0 ? initializeApp({ credential: cert(sa) }) : getApps()[0];
+    fcmMessaging = getMessaging(app);
+    console.log("[FCM] Firebase Admin initialisé ✓");
+  } catch (e) {
+    console.error("[FCM] Erreur initialisation:", e);
+  }
+} else {
+  console.warn("⚠  FCM non configuré — FIREBASE_SERVICE_ACCOUNT manquant");
+}
+
+// Tokens FCM des appareils admin (re-enregistrés à chaque démarrage de l'APK)
+const fcmTokens = new Set<string>();
+
+async function sendFcmPush(title: string, body: string): Promise<void> {
+  if (!fcmMessaging || fcmTokens.size === 0) return;
+  for (const token of [...fcmTokens]) {
+    try {
+      await fcmMessaging.send({
+        token,
+        notification: { title, body },
+        android: { priority: "high", notification: { sound: "default", channelId: "ghostmesh_alerts" } },
+      });
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err.code === "messaging/registration-token-not-registered") fcmTokens.delete(token);
+      else console.error("[FCM] send error:", err);
+    }
+  }
 }
 
 // Répertoire des fichiers statiques (webapp/dist après build)
@@ -245,7 +283,7 @@ const httpServer = createServer((req, res) => {
       if (!isAdmin) return json(401, { error: "unauthorized" });
       const body = await readBody(req) as { code?: string; label?: string };
       const code = String(body.code ?? "").trim();
-      const label = String(body.label ?? "Client").trim();
+      const label = String(body.label ?? "Contact").trim();
       if (!/^\d{8}$/.test(code)) return json(400, { error: "8 chiffres requis (JJMMAAAA)" });
       if (code === INSECURE_CODE.padStart(8, "0")) return json(400, { error: "code réservé" });
       const entry: ClientCode = { code, label, createdAt: Date.now() };
@@ -283,6 +321,16 @@ const httpServer = createServer((req, res) => {
       return json(200, { ok: true });
     }
 
+    // ── POST /admin/register-device ───────────────────────────────────────────
+    if (req.method === "POST" && pathname === "/admin/register-device") {
+      if (!isAdmin) return json(401, { error: "unauthorized" });
+      const body = await readBody(req) as { fcmToken?: string };
+      const fcmToken = String(body.fcmToken ?? "").trim();
+      if (!fcmToken) return json(400, { error: "fcmToken requis" });
+      fcmTokens.add(fcmToken);
+      return json(200, { ok: true, registered: fcmTokens.size });
+    }
+
     // ── POST /client/join ─────────────────────────────────────────────────────
     if (req.method === "POST" && pathname === "/client/join") {
       const body = await readBody(req) as { code?: string };
@@ -306,6 +354,10 @@ const httpServer = createServer((req, res) => {
       rooms.set(roomId, { peers: new Map(), timer, secure, clientCode: code, clientLabel: label, createdAt, wsMode: false });
 
       notifyAdmin({ type: "client_waiting", roomId, code, secure, label, createdAt });
+      sendFcmPush(
+        "GhostMesh — Nouveau contact",
+        `${label ?? code} initie une session${secure ? " sécurisée" : " insecure"}`
+      );
 
       return json(200, { roomId, secure, label });
     }

@@ -22,8 +22,8 @@ const NOTIF_COLORS: Record<AdminNotif["type"], string> = {
 };
 
 const NOTIF_LABELS: Record<AdminNotif["type"], string> = {
-  client_waiting: "NOUVEAU CLIENT",
-  client_ring:    "APPEL",
+  client_waiting: "NOUVEAU CONTACT",
+  client_ring:    "APPEL ENTRANT",
   session_ended:  "SESSION FERMÉE",
   peer_left:      "PAIR DÉCONNECTÉ",
 };
@@ -130,7 +130,7 @@ export function AdminDashboard({ token, onJoinSession }: Props) {
     setCodeLoading(true);
     setCodeError(null);
     try {
-      await adm.createCode(code, newLabel.trim() || "Client");
+      await adm.createCode(code, newLabel.trim() || "Contact");
       setNewCode("");
       setNewLabel("");
     } catch (e) {
@@ -180,7 +180,7 @@ export function AdminDashboard({ token, onJoinSession }: Props) {
         <div style={{ background: BG2, borderBottom: "1px solid #1a1a1a", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div>
             <div style={{ color: ACCENT, fontSize: "13px", fontWeight: "bold", letterSpacing: "0.15em" }}>⬡ GHOSTMESH — ADMIN</div>
-            <div style={{ color: "#333", fontSize: "9px", letterSpacing: "0.1em", marginTop: "2px" }}>PANNEAU VENDEUR</div>
+            <div style={{ color: "#333", fontSize: "9px", letterSpacing: "0.1em", marginTop: "2px" }}>PANNEAU ADMIN</div>
           </div>
           <div style={badgeStyle(adm.connected ? ACCENT : "#444")}>
             {adm.connected ? "● CONNECTÉ" : "○ RECONNEXION..."}
@@ -235,7 +235,7 @@ export function AdminDashboard({ token, onJoinSession }: Props) {
           {tab === "codes" && (
             <div style={{ padding: "12px 20px", display: "flex", flexDirection: "column", gap: "16px" }}>
               <div style={{ background: BG2, border: `1px solid ${ACCENT}22`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                <div style={{ color: "#666", fontSize: "10px", letterSpacing: "0.12em" }}>CRÉER UN CODE CLIENT</div>
+                <div style={{ color: "#666", fontSize: "10px", letterSpacing: "0.12em" }}>CRÉER UN CODE D'ACCÈS</div>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <input className="adm-input" type="text" inputMode="numeric" placeholder="JJMMAAAA" maxLength={8}
                     value={newCode}
@@ -243,7 +243,7 @@ export function AdminDashboard({ token, onJoinSession }: Props) {
                     onKeyDown={(e) => { if (e.key === "Enter") handleCreateCode(); }}
                     style={{ flex: "0 0 140px", letterSpacing: "0.15em", textAlign: "center" }}
                   />
-                  <input className="adm-input" type="text" placeholder="Nom du client" value={newLabel}
+                  <input className="adm-input" type="text" placeholder="Nom du contact" value={newLabel}
                     onChange={(e) => setNewLabel(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleCreateCode(); }}
                     style={{ flex: 1 }}

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type React from "react";
 import { useAdminSocket, type AdminSession, type AdminNotif } from "../hooks/useAdminSocket";
 import { useGhostChat } from "../hooks/useGhostChat";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 import {
   ACCENT, BG, BG2, BG3, RED, ORANGE, FONT,
   formatTime, formatCountdown, copyToClipboard, TTL_MS,
@@ -302,6 +303,7 @@ type Tab = "sessions" | "codes" | "alerts";
 
 export function AdminDashboardMobile({ token, onJoinSession }: DashboardProps) {
   const adm = useAdminSocket(token);
+  usePushNotifications(token);
   const [tab, setTab] = useState<Tab>("sessions");
   const [newCode, setNewCode] = useState("");
   const [newLabel, setNewLabel] = useState("");
@@ -326,7 +328,7 @@ export function AdminDashboardMobile({ token, onJoinSession }: DashboardProps) {
     const newest = adm.notifs[0];
     if (!newest || !("Notification" in window) || Notification.permission !== "granted") return;
     if (newest.type === "client_waiting") {
-      new Notification("GhostMesh — Nouveau client", {
+      new Notification("GhostMesh — Nouveau contact", {
         body: `${newest.label ?? newest.code} initie une session`,
         icon: "/icons/icon.svg",
         tag: newest.roomId,
@@ -348,7 +350,7 @@ export function AdminDashboardMobile({ token, onJoinSession }: DashboardProps) {
     setCodeLoading(true);
     setCodeError(null);
     try {
-      await adm.createCode(code, newLabel.trim() || "Client");
+      await adm.createCode(code, newLabel.trim() || "Contact");
       setNewCode("");
       setNewLabel("");
     } catch (e) {
@@ -479,7 +481,7 @@ export function AdminDashboardMobile({ token, onJoinSession }: DashboardProps) {
             </div>
 
             {adm.sessions.length === 0 ? (
-              <EmptyState icon="◈" label="Aucune session active" sub="Les clients apparaîtront ici" />
+              <EmptyState icon="◈" label="Aucune session active" sub="Les contacts apparaîtront ici" />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {adm.sessions.map(s => (
@@ -519,7 +521,7 @@ export function AdminDashboardMobile({ token, onJoinSession }: DashboardProps) {
                 <input
                   className="gm-input"
                   type="text"
-                  placeholder="Nom client"
+                  placeholder="Nom contact"
                   value={newLabel}
                   onChange={e => setNewLabel(e.target.value)}
                   style={S.input({ flex: "1" })}
@@ -542,7 +544,7 @@ export function AdminDashboardMobile({ token, onJoinSession }: DashboardProps) {
 
             {/* Codes list */}
             {adm.codes.length === 0 ? (
-              <EmptyState icon="⚿" label="Aucun code actif" sub="Créez un code pour vos clients" />
+              <EmptyState icon="⚿" label="Aucun code actif" sub="Créez un code d'accès" />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {adm.codes.map(c => (
@@ -803,8 +805,8 @@ function CodeItem({ code, label, onDelete }: { code: string; label: string; onDe
 
 // ─── Notif Item ───────────────────────────────────────────────────────────────
 const NOTIF_META: Record<string, { icon: string; color: string; label: string }> = {
-  client_waiting: { icon: "◈", color: ACCENT,  label: "NOUVEAU CLIENT" },
-  client_ring:    { icon: "🔔", color: ORANGE, label: "APPEL CLIENT" },
+  client_waiting: { icon: "◈", color: ACCENT,  label: "NOUVEAU CONTACT" },
+  client_ring:    { icon: "🔔", color: ORANGE, label: "APPEL ENTRANT" },
   session_ended:  { icon: "✕",  color: RED,    label: "SESSION FERMÉE" },
   peer_left:      { icon: "◉",  color: "#444", label: "PAIR DÉCONNECTÉ" },
 };
@@ -1079,7 +1081,7 @@ export function AdminChatMobile({ roomId, token, clientCode, clientLabel, secure
           fontSize: "12px",
           textAlign: "center",
           flexShrink: 0,
-        }}>🔔 Appel envoyé au client</div>
+        }}>🔔 Alerte envoyée au contact</div>
       )}
 
       {/* ── Messages ── */}
@@ -1103,7 +1105,7 @@ export function AdminChatMobile({ roomId, token, clientCode, clientLabel, secure
           </div>
           <div style={{ textAlign: "center" }}>
             <div style={{ color: "#2a2a2a", fontSize: "13px", letterSpacing: "0.12em" }}>{si.label}</div>
-            <div style={{ color: "#1a1a1a", fontSize: "11px", marginTop: "6px" }}>En attente du client...</div>
+            <div style={{ color: "#1a1a1a", fontSize: "11px", marginTop: "6px" }}>En attente du contact...</div>
           </div>
         </div>
       ) : (

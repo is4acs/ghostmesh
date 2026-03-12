@@ -134,7 +134,7 @@ export function ChatApp({ roomId, role, secure, adminInfo, onBack }: Props) {
                   style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", color: copied ? ACCENT : "#333", fontSize: "9px", fontFamily: FONT, letterSpacing: "0.05em" }}
                 >
                   {role === "admin"
-                    ? `${adminInfo?.label ?? "Client"} · ${adminInfo?.code}`
+                    ? `${adminInfo?.label ?? "Contact"} · ${adminInfo?.code}`
                     : `room ${roomId.slice(0, 8)}...`} {copied ? "✓ copié" : "⊕"}
                 </button>
               </div>
@@ -149,7 +149,7 @@ export function ChatApp({ roomId, role, secure, adminInfo, onBack }: Props) {
           {!secure && (
             <div style={{ background: `${ORANGE}0a`, borderBottom: `1px solid ${ORANGE}33`, padding: "8px 20px", fontSize: "10px", color: ORANGE, letterSpacing: "0.08em", flexShrink: 0, display: "flex", gap: "8px" }}>
               <span>⚠</span>
-              <span>SESSION NON SÉCURISÉE — Code général utilisé. L'identité du client n'est pas vérifiée.</span>
+              <span>SESSION NON SÉCURISÉE — Code général utilisé. L'identité du contact n'est pas vérifiée.</span>
             </div>
           )}
 
@@ -178,12 +178,6 @@ export function ChatApp({ roomId, role, secure, adminInfo, onBack }: Props) {
             </div>
           )}
 
-          {/* ── Ring sent toast (client) ───────────────────────────────── */}
-          {chat.ringAcked && role === "client" && (
-            <div style={{ padding: "10px 20px 0", flexShrink: 0 }}>
-              <div style={{ ...errorBoxStyle(ORANGE), textAlign: "center" }}>🔔 Appel envoyé au vendeur</div>
-            </div>
-          )}
 
           {/* ── Messages / Waiting ────────────────────────────────────── */}
           {!isActive && !isClosed && chat.messages.length === 0 ? (
@@ -192,7 +186,7 @@ export function ChatApp({ roomId, role, secure, adminInfo, onBack }: Props) {
               <div>{STATUS_LABELS[chat.status] ?? "..."}</div>
               {(chat.status === "signaling" || chat.status === "connecting") && (
                 <div style={{ color: "#333", fontSize: "10px" }}>
-                  {role === "client" ? "En attente du vendeur..." : "En attente du client..."}
+                  {role === "client" ? "En attente de l'agent..." : "En attente du contact..."}
                 </div>
               )}
             </div>
@@ -204,7 +198,7 @@ export function ChatApp({ roomId, role, secure, adminInfo, onBack }: Props) {
                     <div style={{ fontSize: "9px", color: m.self ? `${ACCENT}99` : "#555", marginBottom: "4px", textAlign: m.self ? "right" : "left", letterSpacing: "0.05em" }}>
                       {m.self
                         ? (role === "admin" ? "ADMIN" : "VOUS")
-                        : (role === "admin" ? (adminInfo?.label ?? "CLIENT") : "VENDEUR")
+                        : (role === "admin" ? (adminInfo?.label ?? "CONTACT") : "AGENT")
                       } · {formatTime(m.ts)}
                     </div>
                     <div style={{ fontSize: "13px", color: "#e0e0e0", lineHeight: "1.5", wordBreak: "break-word", whiteSpace: "pre-wrap" }}>{m.text}</div>
@@ -251,14 +245,6 @@ export function ChatApp({ roomId, role, secure, adminInfo, onBack }: Props) {
                   ENVOYER
                 </button>
                 <div style={{ display: "flex", gap: "6px" }}>
-                  {role === "client" && (
-                    <button
-                      onClick={chat.ring}
-                      disabled={chat.ringAcked}
-                      title="Appeler le vendeur"
-                      style={{ background: chat.ringAcked ? `${ORANGE}22` : "transparent", color: chat.ringAcked ? ORANGE : "#555", border: `1px solid ${chat.ringAcked ? ORANGE + "66" : "#2a2a2a"}`, borderRadius: "4px", padding: "0 10px", height: "28px", fontFamily: FONT, fontSize: "13px", cursor: chat.ringAcked ? "not-allowed" : "pointer", flex: 1, animation: chat.ringAcked ? "ringGlow .8s infinite" : "none" }}
-                    >🔔</button>
-                  )}
                   {role === "admin" && (
                     <button
                       onClick={handleAdminEnd}
