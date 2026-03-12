@@ -1,28 +1,20 @@
-import type { CapacitorConfig } from '@capacitor/cli';
-
-// URL de ton serveur Railway en production.
-// L'APK charge directement depuis ce domaine → toujours à jour sans rebuild APK.
-const PRODUCTION_URL = process.env.CAPACITOR_SERVER_URL ?? "https://ghostmesh-production.up.railway.app";
+import type { CapacitorConfig } from '@capacitor/core';
 
 const config: CapacitorConfig = {
   appId:   "com.ghostmesh.app",
   appName: "GhostMesh",
   webDir:  "dist",
 
-  // Mode "remote URL" : le WebView charge l'app depuis le serveur Railway.
-  // Avantages : APK léger, mises à jour instantanées sans redistribution.
+  // Mode local : l'APK contient tous les assets
+  // L'app fonctionne hors-ligne et détecte correctement le mode natif
   server: {
-    url:       PRODUCTION_URL,
-    cleartext: false,             // Force HTTPS uniquement
+    androidScheme: "https",
   },
 
   android: {
-    // Nécessaire pour WebRTC + Web Crypto API dans la WebView Android
-    allowMixedContent:           false,
-    captureInput:                true,
-    webContentsDebuggingEnabled: false, // passer à true en dev si besoin
-
-    // Couleurs système
+    allowMixedContent: false,
+    captureInput: true,
+    webContentsDebuggingEnabled: false,
     backgroundColor: "#070707",
   },
 };

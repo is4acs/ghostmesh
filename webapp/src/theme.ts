@@ -8,6 +8,56 @@ export const RED     = "#FF3B30";
 export const ORANGE  = "#FF9500";
 export const FONT    = "'Courier New', Courier, monospace";
 
+// ─── Mobile-First Helpers ────────────────────────────────────────────────────
+
+export const SAFE_AREA_TOP    = "env(safe-area-inset-top)";
+export const SAFE_AREA_BOTTOM = "env(safe-area-inset-bottom)";
+export const SAFE_AREA_LEFT   = "env(safe-area-inset-left)";
+export const SAFE_AREA_RIGHT  = "env(safe-area-inset-right)";
+
+export function mobileInputStyle(): React.CSSProperties {
+  return {
+    background: BG3,
+    border: "1px solid #2a2a2a",
+    color: "#e0e0e0",
+    fontFamily: FONT,
+    fontSize: "16px",
+    padding: "14px 16px",
+    borderRadius: "12px",
+    width: "100%",
+    outline: "none",
+    WebkitAppearance: "none",
+    WebkitTapHighlightColor: "transparent",
+  };
+}
+
+export function mobileBtnStyle(primary = true, disabled = false): React.CSSProperties {
+  return {
+    background: primary ? ACCENT : "transparent",
+    color: primary ? BG : "#888",
+    border: primary ? "none" : "1px solid #333",
+    borderRadius: "12px",
+    padding: "16px 24px",
+    fontFamily: FONT,
+    fontSize: "14px",
+    fontWeight: "bold",
+    cursor: disabled ? "not-allowed" : "pointer",
+    letterSpacing: "0.08em",
+    opacity: disabled ? 0.4 : 1,
+    WebkitTapHighlightColor: "transparent",
+    transition: "transform 0.1s, opacity 0.1s",
+  };
+}
+
+export function mobileCardStyle(): React.CSSProperties {
+  return {
+    background: BG2,
+    border: "1px solid #1a1a1a",
+    borderRadius: "16px",
+    padding: "16px",
+  };
+}
+
 // ─── Shared Constants ─────────────────────────────────────────────────────────
 
 export const RING_DURATION_MS  = 3_000;

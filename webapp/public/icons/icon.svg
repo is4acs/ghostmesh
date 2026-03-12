@@ -1,20 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="80" fill="#070707"/>
-  <!-- Hexagon -->
+  <!-- Fond sombre — cohérent GrapheneOS dark theme -->
+  <rect width="512" height="512" rx="96" fill="#0a0a0a"/>
+
+  <!-- Hexagone GhostMesh -->
   <polygon
-    points="256,80 388,158 388,354 256,432 124,354 124,158"
+    points="256,72 370,136 370,264 256,328 142,264 142,136"
     fill="none"
     stroke="#C8FF00"
-    stroke-width="18"
+    stroke-width="20"
     stroke-linejoin="round"
   />
-  <!-- G letterform -->
+
+  <!-- Lettre G stylisée -->
   <path
-    d="M300,200 A70,70 0 1,0 300,312 L300,260 L250,260"
+    d="M296,168
+       A72,72 0 1,0 296,312
+       L296,254 L244,254"
     fill="none"
     stroke="#C8FF00"
-    stroke-width="22"
+    stroke-width="24"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
+
+  <!-- Dot indicateur — session active -->
+  <circle cx="348" cy="356" r="36" fill="#0a0a0a"/>
+  <circle cx="348" cy="356" r="24" fill="#C8FF00"/>
 </svg>

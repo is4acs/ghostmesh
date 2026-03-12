@@ -4,8 +4,22 @@ import { URL } from "url";
 import { readFileSync, existsSync, statSync } from "fs";
 import { join, extname, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createClient } from "@supabase/supabase-js";
 
 const PORT = Number(process.env.PORT ?? 3000);
+
+// ─── Supabase ─────────────────────────────────────────────────────────────────
+// Variables requises : SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (dans .env / Railway)
+const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+
+const db = SUPABASE_URL && SUPABASE_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } })
+  : null;
+
+if (!db) {
+  console.warn("⚠  Supabase non configuré — stockage en mémoire uniquement");
+}
 
 // Répertoire des fichiers statiques (webapp/dist après build)
 const __filename = fileURLToPath(import.meta.url);
@@ -82,6 +96,61 @@ const clientCodes = new Map<string, ClientCode>();
 const rooms = new Map<string, Room>();
 let adminWs: WebSocket | null = null;
 
+// ─── Supabase helpers ─────────────────────────────────────────────────────────
+
+/** Charge les codes depuis Supabase au démarrage (best-effort). */
+async function loadCodesFromDb(): Promise<void> {
+  if (!db) return;
+  try {
+    const { data, error } = await db.from("client_codes").select("code, label, created_at");
+    if (error) { console.error("[Supabase] load error:", error.message); return; }
+    for (const row of data ?? []) {
+      clientCodes.set(row.code, { code: row.code, label: row.label, createdAt: new Date(row.created_at).getTime() });
+    }
+    console.log(`[Supabase] ${clientCodes.size} code(s) chargé(s)`);
+  } catch (e) {
+    console.error("[Supabase] load exception:", e);
+  }
+}
+
+/** Persiste un nouveau code dans Supabase (best-effort). */
+async function persistCode(entry: ClientCode): Promise<void> {
+  if (!db) return;
+  try {
+    const { error } = await db.from("client_codes").upsert({ code: entry.code, label: entry.label, created_at: new Date(entry.createdAt).toISOString() });
+    if (error) console.error("[Supabase] upsert code error:", error.message);
+  } catch (e) {
+    console.error("[Supabase] upsert exception:", e);
+  }
+}
+
+/** Supprime un code de Supabase (best-effort). */
+async function deleteCodeFromDb(code: string): Promise<void> {
+  if (!db) return;
+  try {
+    const { error } = await db.from("client_codes").delete().eq("code", code);
+    if (error) console.error("[Supabase] delete code error:", error.message);
+  } catch (e) {
+    console.error("[Supabase] delete exception:", e);
+  }
+}
+
+/** Enregistre une session terminée dans le journal d'audit. */
+async function logSessionEnd(roomId: string, room: Room): Promise<void> {
+  if (!db) return;
+  try {
+    await db.from("sessions_log").insert({
+      room_id: roomId,
+      client_code: room.clientCode,
+      client_label: room.clientLabel ?? null,
+      secure: room.secure,
+      started_at: new Date(room.createdAt).toISOString(),
+      ended_at: new Date().toISOString(),
+      peer_count: room.peers.size,
+    });
+  } catch {}
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function genRoomId(): string {
@@ -101,6 +170,7 @@ function destroyRoom(roomId: string): void {
   for (const [, peer] of room.peers) {
     try { peer.ws.close(1001, "room_expired"); } catch {}
   }
+  logSessionEnd(roomId, room); // best-effort audit log
   rooms.delete(roomId);
   notifyAdmin({ type: "session_ended", roomId });
 }
@@ -178,7 +248,9 @@ const httpServer = createServer((req, res) => {
       const label = String(body.label ?? "Client").trim();
       if (!/^\d{8}$/.test(code)) return json(400, { error: "8 chiffres requis (JJMMAAAA)" });
       if (code === INSECURE_CODE.padStart(8, "0")) return json(400, { error: "code réservé" });
-      clientCodes.set(code, { code, label, createdAt: Date.now() });
+      const entry: ClientCode = { code, label, createdAt: Date.now() };
+      clientCodes.set(code, entry);
+      await persistCode(entry);
       return json(200, { ok: true, code, label });
     }
 
@@ -193,6 +265,7 @@ const httpServer = createServer((req, res) => {
       if (!isAdmin) return json(401, { error: "unauthorized" });
       const code = pathname.split("/").pop() ?? "";
       clientCodes.delete(code);
+      await deleteCodeFromDb(code);
       return json(200, { ok: true });
     }
 
@@ -405,9 +478,11 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage, context: string) => {
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
-httpServer.listen(PORT, "0.0.0.0", () => {
+httpServer.listen(PORT, "0.0.0.0", async () => {
   console.log(`\n⬡  GhostMesh Server — port ${PORT}`);
   console.log(`   Admin token  : ${ADMIN_TOKEN}`);
   console.log(`   Insecure code: ${INSECURE_CODE}`);
-  console.log(`   Static dir   : ${STATIC_DIR} (${existsSync(STATIC_DIR) ? "✓" : "absent — dev mode"})\n`);
+  console.log(`   Static dir   : ${STATIC_DIR} (${existsSync(STATIC_DIR) ? "✓" : "absent — dev mode"})`);
+  console.log(`   Supabase     : ${db ? "✓ connecté" : "✗ non configuré"}\n`);
+  await loadCodesFromDb();
 });
