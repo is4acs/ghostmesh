@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "900032778272",
+    "project_id": "ghostmesh-a67e3",
+    "storage_bucket": "ghostmesh-a67e3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:900032778272:android:29b51c9adc4a1dde06ac45",
+        "android_client_info": {
+          "package_name": "com.ghostmesh.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRzJOUrGmFjB7cP3ZmjIATQ8c-FZIdo6o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
