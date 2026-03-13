@@ -39,22 +39,49 @@ if (FIREBASE_SA) {
   console.warn("⚠  FCM non configuré — FIREBASE_SERVICE_ACCOUNT manquant");
 }
 
-// Tokens FCM des appareils admin (re-enregistrés à chaque démarrage de l'APK)
+// Tokens FCM des appareils admin — chargés depuis Supabase au démarrage
 const fcmTokens = new Set<string>();
 
+// Charger les tokens persistés au démarrage
+(async () => {
+  if (!db) return;
+  try {
+    const { data, error } = await db.from("fcm_tokens").select("token");
+    if (error) { console.error("[FCM] Erreur chargement tokens:", error.message); return; }
+    for (const row of data ?? []) fcmTokens.add(row.token);
+    console.log(`[FCM] ${fcmTokens.size} token(s) chargé(s) depuis Supabase`);
+  } catch (e) { console.error("[FCM] Erreur chargement tokens:", e); }
+})();
+
+async function saveFcmToken(token: string): Promise<void> {
+  fcmTokens.add(token);
+  if (!db) return;
+  try {
+    await db.from("fcm_tokens").upsert({ token }, { onConflict: "token" });
+  } catch (e) { console.error("[FCM] Erreur sauvegarde token:", e); }
+}
+
 async function sendFcmPush(title: string, body: string): Promise<void> {
-  if (!fcmMessaging || fcmTokens.size === 0) return;
+  if (!fcmMessaging) { console.warn("[FCM] fcmMessaging null — Firebase non initialisé"); return; }
+  if (fcmTokens.size === 0) { console.warn("[FCM] Aucun token enregistré"); return; }
+  console.log(`[FCM] Envoi push à ${fcmTokens.size} appareil(s): "${title}"`);
   for (const token of [...fcmTokens]) {
     try {
-      await fcmMessaging.send({
+      const msgId = await fcmMessaging.send({
         token,
         notification: { title, body },
         android: { priority: "high", notification: { sound: "default", channelId: "ghostmesh_alerts" } },
       });
+      console.log("[FCM] Push envoyé ✓ messageId:", msgId);
     } catch (e: unknown) {
-      const err = e as { code?: string };
-      if (err.code === "messaging/registration-token-not-registered") fcmTokens.delete(token);
-      else console.error("[FCM] send error:", err);
+      const err = e as { code?: string; message?: string };
+      if (err.code === "messaging/registration-token-not-registered") {
+        console.warn("[FCM] Token invalide, suppression:", token.substring(0, 20));
+        fcmTokens.delete(token);
+        if (db) await db.from("fcm_tokens").delete().eq("token", token);
+      } else {
+        console.error("[FCM] Erreur envoi:", err.code, err.message);
+      }
     }
   }
 }
@@ -327,7 +354,8 @@ const httpServer = createServer((req, res) => {
       const body = await readBody(req) as { fcmToken?: string };
       const fcmToken = String(body.fcmToken ?? "").trim();
       if (!fcmToken) return json(400, { error: "fcmToken requis" });
-      fcmTokens.add(fcmToken);
+      await saveFcmToken(fcmToken);
+      console.log(`[FCM] Token enregistré: ${fcmToken.substring(0, 20)}... (total: ${fcmTokens.size})`);
       return json(200, { ok: true, registered: fcmTokens.size });
     }
 

@@ -29,5 +29,12 @@ create index if not exists idx_sessions_log_started on sessions_log (started_at 
 alter table client_codes  enable row level security;
 alter table sessions_log  enable row level security;
 
+-- 3. Tokens FCM (persistants entre redémarrages serveur)
+create table if not exists fcm_tokens (
+  token       text        primary key,
+  created_at  timestamptz not null default now()
+);
+alter table fcm_tokens enable row level security;
+
 -- Pas de policy publique — tout passe par le backend Node (service_role key)
 -- Le frontend React ne contacte jamais Supabase directement

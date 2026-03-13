@@ -3,10 +3,6 @@ import { API_BASE } from "../theme";
 
 const IS_NATIVE = typeof location !== "undefined" && location.hostname === "localhost";
 
-/**
- * Enregistre le token FCM auprès du serveur Railway dès que l'APK démarre.
- * Ne fait rien en contexte web (IS_NATIVE = false).
- */
 export function usePushNotifications(adminToken: string): void {
   useEffect(() => {
     if (!IS_NATIVE || !adminToken) return;
@@ -17,14 +13,22 @@ export function usePushNotifications(adminToken: string): void {
       try {
         const { PushNotifications } = await import("@capacitor/push-notifications");
 
-        const perm = await PushNotifications.requestPermissions();
-        if (perm.receive !== "granted") return;
+        // Créer le canal de notification AVANT d'enregistrer (Android 8+)
+        await PushNotifications.createChannel({
+          id: "ghostmesh_alerts",
+          name: "GhostMesh Alertes",
+          description: "Notifications de nouvelles sessions",
+          importance: 5, // IMPORTANCE_HIGH
+          sound: "default",
+          vibration: true,
+          visibility: 1,
+        });
 
-        await PushNotifications.register();
-
+        // Ajouter les listeners AVANT register() pour éviter la race condition
         const regListener = await PushNotifications.addListener("registration", async (token) => {
+          console.log("[FCM] Token reçu:", token.value.substring(0, 20) + "...");
           try {
-            await fetch(`${API_BASE}/admin/register-device`, {
+            const res = await fetch(`${API_BASE}/admin/register-device`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -32,17 +36,30 @@ export function usePushNotifications(adminToken: string): void {
               },
               body: JSON.stringify({ fcmToken: token.value }),
             });
-          } catch { /* best-effort */ }
+            console.log("[FCM] Enregistrement serveur:", res.status);
+          } catch (e) {
+            console.error("[FCM] Erreur enregistrement serveur:", e);
+          }
         });
 
         const errListener = await PushNotifications.addListener("registrationError", (err) => {
           console.error("[FCM] Erreur d'enregistrement:", err.error);
         });
 
+        const fgListener = await PushNotifications.addListener("pushNotificationReceived", (notif) => {
+          console.log("[FCM] Notification foreground reçue:", notif.title);
+        });
+
         removeListeners = () => {
           regListener.remove();
           errListener.remove();
+          fgListener.remove();
         };
+
+        const perm = await PushNotifications.requestPermissions();
+        if (perm.receive !== "granted") return;
+
+        await PushNotifications.register();
       } catch {
         // PushNotifications non disponible en contexte web — ignoré
       }
