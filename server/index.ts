@@ -101,6 +101,9 @@ const MIME: Record<string, string> = {
   ".json": "application/json",
   ".woff2":"font/woff2",
   ".woff": "font/woff",
+  // APK — force download au lieu d'afficher dans le navigateur
+  ".apk":  "application/vnd.android.package-archive",
+  ".aab":  "application/x-authorware-bin",
 };
 
 function serveStatic(res: import("http").ServerResponse, pathname: string): boolean {
@@ -111,8 +114,15 @@ function serveStatic(res: import("http").ServerResponse, pathname: string): bool
   ];
   for (const fp of candidates) {
     if (existsSync(fp) && statSync(fp).isFile()) {
-      const mime = MIME[extname(fp)] ?? "application/octet-stream";
-      res.writeHead(200, { "Content-Type": mime });
+      const ext  = extname(fp);
+      const mime = MIME[ext] ?? "application/octet-stream";
+      const headers: Record<string, string> = { "Content-Type": mime };
+      // Force le téléchargement pour les APK (pas d'affichage navigateur)
+      if (ext === ".apk") {
+        headers["Content-Disposition"] = `attachment; filename="GhostMesh.apk"`;
+        headers["Content-Length"] = String(statSync(fp).size);
+      }
+      res.writeHead(200, headers);
       res.end(readFileSync(fp));
       return true;
     }

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>GhostMesh — Télécharger</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #070707;
+      --bg2:     #0f0f0f;
+      --bg3:     #161616;
+      --accent:  #C8FF00;
+      --red:     #FF3B30;
+      --orange:  #FF9500;
+      --font:    'Courier New', Courier, monospace;
+      --border:  #1a1a1a;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: #fff;
+      font-family: var(--font);
+      min-height: 100vh;
+    }
+
+    .page {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 32px 20px;
+      gap: 32px;
+    }
+
+    /* ── Logo ── */
+    .logo {
+      text-align: center;
+    }
+    .logo-hex {
+      font-size: 28px;
+      letter-spacing: 0.25em;
+      font-weight: bold;
+      color: var(--accent);
+    }
+    .logo-sub {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: #333;
+      margin-top: 6px;
+    }
+
+    /* ── Card ── */
+    .card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: #444;
+    }
+
+    .app-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .app-icon {
+      width: 64px;
+      height: 64px;
+      background: #0a0a0a;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+      border: 1px solid #1a1a1a;
+    }
+
+    .app-meta { display: flex; flex-direction: column; gap: 4px; }
+    .app-name { font-size: 18px; font-weight: bold; color: #fff; letter-spacing: 0.05em; }
+    .app-version { font-size: 10px; color: #444; letter-spacing: 0.1em; }
+
+    /* ── Badges sécurité ── */
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .badge {
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid;
+    }
+    .badge-green  { color: var(--accent); border-color: #C8FF0033; background: #C8FF000a; }
+    .badge-gray   { color: #555;          border-color: #222;       background: #111; }
+
+    /* ── Bouton download ── */
+    .btn-download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-download:hover  { opacity: 0.88; }
+    .btn-download:active { opacity: 0.75; transform: scale(0.98); }
+
+    .btn-icon { font-size: 18px; }
+
+    /* ── File info ── */
+    .file-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #333;
+      letter-spacing: 0.08em;
+      padding-top: 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Instructions ── */
+    .instructions {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .step-num {
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.1em;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-text {
+      font-size: 11px;
+      color: #666;
+      line-height: 1.6;
+      letter-spacing: 0.04em;
+    }
+
+    .step-text strong { color: #aaa; }
+
+    /* ── Warning GrapheneOS ── */
+    .warning {
+      width: 100%;
+      max-width: 400px;
+      background: #0d0d00;
+      border: 1px solid #C8FF0022;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 10px;
+      color: #555;
+      letter-spacing: 0.06em;
+      line-height: 1.7;
+    }
+
+    .warning strong { color: var(--accent); }
+
+    /* ── Footer ── */
+    .footer {
+      font-size: 9px;
+      color: #222;
+      letter-spacing: 0.1em;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Logo -->
+    <div class="logo">
+      <div class="logo-hex">⬡ GHOSTMESH</div>
+      <div class="logo-sub">APPLICATION ANDROID</div>
+    </div>
+
+    <!-- Card principale -->
+    <div class="card">
+      <div class="card-title">TÉLÉCHARGEMENT</div>
+
+      <div class="app-info">
+        <div class="app-icon">⬡</div>
+        <div class="app-meta">
+          <div class="app-name">GhostMesh</div>
+          <div class="app-version">ADMIN · ANDROID APK</div>
+        </div>
+      </div>
+
+      <div class="badges">
+        <span class="badge badge-green">✓ E2E CHIFFRÉ</span>
+        <span class="badge badge-green">✓ GRAPHENEOS</span>
+        <span class="badge badge-green">✓ ZÉRO TRACKING</span>
+        <span class="badge badge-gray">APK DEBUG</span>
+      </div>
+
+      <a class="btn-download" href="/ghostmesh.apk" download="GhostMesh.apk">
+        <span class="btn-icon">↓</span>
+        TÉLÉCHARGER L'APK
+      </a>
+
+      <div class="file-info">
+        <span>GhostMesh.apk</span>
+        <span>Android 7.0+</span>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions">
+
+      <div class="step">
+        <span class="step-num">01</span>
+        <span class="step-text">
+          <strong>Paramètres → Sécurité</strong><br>
+          Activer "Sources inconnues" ou "Installer des apps inconnues"
+        </span>
+      </div>
+
+      <div class="step">
+        <span class="step-num">02</span>
+        <span class="step-text">
+          <strong>Ouvrir le fichier téléchargé</strong><br>
+          Depuis le gestionnaire de fichiers ou la notification de téléchargement
+        </span>
+      </div>
+
+      <div class="step">
+        <span class="step-num">03</span>
+        <span class="step-text">
+          <strong>Installer → Ouvrir</strong><br>
+          L'app s'installe sans Google Play. Aucun compte requis.
+        </span>
+      </div>
+
+    </div>
+
+    <!-- Note GrapheneOS -->
+    <div class="warning">
+      <strong>GrapheneOS</strong> — Pour installer sur un profil secondaire :<br>
+      Basculez vers ce profil avant de télécharger, ou utilisez<br>
+      <strong>adb install --user &lt;id&gt; GhostMesh.apk</strong>
+    </div>
+
+    <div class="footer">ACCÈS RÉSERVÉ · NE PAS PARTAGER CETTE URL</div>
+
+  </div>
+</body>
+</html>
