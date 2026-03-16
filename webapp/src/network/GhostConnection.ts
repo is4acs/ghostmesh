@@ -75,20 +75,23 @@ export class GhostConnection {
   private _wsInitiator = false;
   private _iceTimer:   ReturnType<typeof setTimeout> | null = null;
 
-  private roomId: string;
-  private role:   "client" | "admin";
-  private cb:     GhostConnectionCallbacks;
+  private roomId:     string;
+  private role:       "client" | "admin";
+  private adminToken: string;   // required to claim role=admin on the signaling WS
+  private cb:         GhostConnectionCallbacks;
 
   get isSecure(): boolean { return this._isSecure; }
 
   constructor(
     roomId: string,
     callbacks: GhostConnectionCallbacks,
-    role: "client" | "admin" = "client"
+    role: "client" | "admin" = "client",
+    adminToken = ""
   ) {
-    this.roomId = roomId;
-    this.cb     = callbacks;
-    this.role   = role;
+    this.roomId     = roomId;
+    this.cb         = callbacks;
+    this.role       = role;
+    this.adminToken = adminToken;
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
@@ -100,7 +103,10 @@ export class GhostConnection {
     // (React Strict Mode cleanup fires before the async continuation).
     if (this._closed) return;
 
-    const roleParam = this.role === "admin" ? "?role=admin" : "";
+    // Admin role requires a valid token — server rejects unauthenticated role claims
+    const roleParam = this.role === "admin"
+      ? `?role=admin&token=${encodeURIComponent(this.adminToken)}`
+      : "";
     this.ws = new WebSocket(wsUrl(`/signal/${this.roomId}${roleParam}`));
     this.ws.binaryType = "arraybuffer";
 

@@ -21,7 +21,8 @@ export interface GhostChatState {
 
 export function useGhostChat(
   roomId: string,
-  role: "client" | "admin" = "client"
+  role: "client" | "admin" = "client",
+  adminToken = ""
 ): GhostChatState {
   const [status,       setStatus]       = useState<ConnectionStatus>("idle");
   const [messages,     setMessages]     = useState<GhostMessage[]>([]);
@@ -54,7 +55,8 @@ export function useGhostChat(
         onSecure:       (s) => setIsSecure(s),
         onRingAck:      () => triggerRingFeedback(),
       },
-      role
+      role,
+      adminToken
     );
     connRef.current = conn;
 
@@ -68,7 +70,7 @@ export function useGhostChat(
       // Clear pending ring timer to avoid setState on unmounted component
       if (ringTimerRef.current) clearTimeout(ringTimerRef.current);
     };
-  }, [roomId, role]);
+  }, [roomId, role, adminToken]);
 
   const send = useCallback(async (text: string) => {
     await connRef.current?.sendMessage(text);

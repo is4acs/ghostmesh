@@ -16,11 +16,14 @@ export const FRAME_MESSAGE = 0x02;
 export const FRAME_BYE     = 0x03;
 
 export async function generateKeyPair(): Promise<KeyPair> {
+  // extractable: false on the private key — it can never be exported/leaked.
+  // We only need to export the public key, so we generate both separately.
   const pair = await crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
-    true,
+    false,         // private key non-extractable (CRYPTO-4 fix)
     ["deriveKey"]
   );
+  // Export public key only (needed to send to peer for ECDH)
   const rawPub = await crypto.subtle.exportKey("raw", pair.publicKey);
   return {
     publicKey: pair.publicKey,
@@ -115,10 +118,14 @@ export async function deriveVerificationCode(
   peerPubRaw: Uint8Array<ArrayBuffer>
 ): Promise<{ emojis: string; hex: string }> {
   const combined = new Uint8Array(myPubRaw.length + peerPubRaw.length);
-  // Sort so both peers get the same code regardless of order
-  const [a, b] = myPubRaw[1] < peerPubRaw[1]
-    ? [myPubRaw, peerPubRaw]
-    : [peerPubRaw, myPubRaw];
+  // Sort so both peers get the same code regardless of who calls first.
+  // Use full lexicographic comparison (fixes CRYPTO-6 single-byte sort bug).
+  let cmp = 0;
+  for (let i = 0; i < Math.min(myPubRaw.length, peerPubRaw.length); i++) {
+    cmp = myPubRaw[i] - peerPubRaw[i];
+    if (cmp !== 0) break;
+  }
+  const [a, b] = cmp <= 0 ? [myPubRaw, peerPubRaw] : [peerPubRaw, myPubRaw];
   combined.set(a, 0);
   combined.set(b, a.length);
   const digest = await crypto.subtle.digest("SHA-256", combined as Uint8Array<ArrayBuffer>);

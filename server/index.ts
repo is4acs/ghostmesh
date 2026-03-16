@@ -140,6 +140,43 @@ const TTL_MS = 10 * 60 * 1000;
 const ADMIN_TOKEN: string = process.env.ADMIN_TOKEN ?? "GHOST_ADMIN";
 const INSECURE_CODE: string = process.env.INSECURE_CODE ?? "00000";
 
+// ─── Rate Limiter ──────────────────────────────────────────────────────────────
+// Simple in-memory IP-based rate limiter to prevent brute-force & DoS attacks.
+interface RateEntry { count: number; resetAt: number; }
+const rateLimits = new Map<string, RateEntry>();
+
+/**
+ * Returns true if the request is allowed, false if the limit is exceeded.
+ * @param key       Bucket key (e.g. "auth:<ip>" or "join:<ip>")
+ * @param limit     Max requests per window
+ * @param windowMs  Window size in milliseconds
+ */
+function rateAllow(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  let entry = rateLimits.get(key);
+  if (!entry || now > entry.resetAt) {
+    entry = { count: 1, resetAt: now + windowMs };
+    rateLimits.set(key, entry);
+    return true;
+  }
+  entry.count++;
+  return entry.count <= limit;
+}
+
+// Periodically clean up expired rate-limit entries to avoid memory leak
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of rateLimits) {
+    if (now > v.resetAt) rateLimits.delete(k);
+  }
+}, 60_000);
+
+function clientIp(req: IncomingMessage): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0]?.trim();
+  return ip ?? req.socket.remoteAddress ?? "unknown";
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ClientCode {
@@ -162,7 +199,8 @@ interface Room {
   clientCode:   string;
   clientLabel?: string;
   createdAt:    number;
-  wsMode:       boolean; // true when WebRTC failed → peers use WS relay
+  wsMode:       boolean;        // true when WebRTC failed → peers use WS relay
+  wsPubkeySent: Set<string>;    // peerIds that have already sent ws_pubkey (prevents injection)
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -260,10 +298,22 @@ function broadcast(roomId: string, data: string | Buffer, excludeId?: string): v
   }
 }
 
+const MAX_BODY_BYTES = 16 * 1024; // 16 KB — no legitimate request needs more
+
 function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on("data", (c: Buffer | string) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(String(c))));
+    let size = 0;
+    req.on("data", (c: Buffer | string) => {
+      const buf = Buffer.isBuffer(c) ? c : Buffer.from(String(c));
+      size += buf.length;
+      if (size > MAX_BODY_BYTES) {
+        req.destroy();          // abort the connection immediately
+        resolve({});            // treat as empty body → 401/403 downstream
+        return;
+      }
+      chunks.push(buf);
+    });
     req.on("end", () => {
       const text = Buffer.concat(chunks).toString("utf8").trim();
       try { resolve(text ? JSON.parse(text) : {}); }
@@ -287,7 +337,24 @@ function sessionSnapshot() {
 // ─── HTTP Server ──────────────────────────────────────────────────────────────
 
 const httpServer = createServer((req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // Restrict CORS: admin routes only accept requests from the same origin.
+  // Public endpoints (/client/join, static files) remain accessible cross-origin.
+  const origin = req.headers.origin ?? "";
+  const isAdminRoute = (req.url ?? "").startsWith("/admin");
+  if (isAdminRoute) {
+    // Allowlist: Railway domain + localhost dev
+    const allowed = [
+      "https://ghostmesh-production.up.railway.app",
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ];
+    if (allowed.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    }
+    // No CORS header → browser blocks cross-origin admin requests
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  }
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
@@ -310,6 +377,10 @@ const httpServer = createServer((req, res) => {
   (async () => {
     // ── POST /admin/auth ──────────────────────────────────────────────────────
     if (req.method === "POST" && pathname === "/admin/auth") {
+      // Rate limit: 10 attempts per minute per IP
+      if (!rateAllow(`auth:${clientIp(req)}`, 10, 60_000)) {
+        return json(429, { error: "too_many_requests" });
+      }
       const body = await readBody(req) as { token?: string };
       if (body.token === ADMIN_TOKEN) return json(200, { ok: true });
       return json(401, { error: "unauthorized" });
@@ -371,6 +442,10 @@ const httpServer = createServer((req, res) => {
 
     // ── POST /client/join ─────────────────────────────────────────────────────
     if (req.method === "POST" && pathname === "/client/join") {
+      // Rate limit: 10 session creations per minute per IP
+      if (!rateAllow(`join:${clientIp(req)}`, 10, 60_000)) {
+        return json(429, { error: "too_many_requests" });
+      }
       const body = await readBody(req) as { code?: string };
       const code = String(body.code ?? "").trim();
 
@@ -389,7 +464,7 @@ const httpServer = createServer((req, res) => {
       const roomId = genRoomId();
       const timer = setTimeout(() => destroyRoom(roomId), TTL_MS);
       const createdAt = Date.now();
-      rooms.set(roomId, { peers: new Map(), timer, secure, clientCode: code, clientLabel: label, createdAt, wsMode: false });
+      rooms.set(roomId, { peers: new Map(), timer, secure, clientCode: code, clientLabel: label, createdAt, wsMode: false, wsPubkeySent: new Set() });
 
       notifyAdmin({ type: "client_waiting", roomId, code, secure, label, createdAt });
       sendFcmPush(
@@ -413,7 +488,9 @@ const httpServer = createServer((req, res) => {
 
 // ─── WebSocket Server ─────────────────────────────────────────────────────────
 
-const wss = new WebSocketServer({ noServer: true });
+// 64 KB max per WebSocket message — prevents memory exhaustion via oversized payloads.
+// Signaling messages (SDP, ICE, encrypted chat) are always well under this limit.
+const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
 
 httpServer.on("upgrade", (req: IncomingMessage, socket, head) => {
   const url = new URL(req.url ?? "/", "http://localhost");
@@ -488,7 +565,12 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage, context: string) => {
   if (room.peers.size >= 2) { ws.close(1008, "room_full"); return; }
 
   const peerId = crypto.randomUUID();
-  const role = url.searchParams.get("role") === "admin" ? "admin" : "client";
+  // Validate admin role: only grant if the correct token is provided.
+  // Prevents impersonation: any anonymous peer claiming role=admin is treated as client.
+  const claimedRole = url.searchParams.get("role");
+  const wsToken     = url.searchParams.get("token") ?? "";
+  const role: "admin" | "client" =
+    (claimedRole === "admin" && wsToken === ADMIN_TOKEN) ? "admin" : "client";
 
   room.peers.set(peerId, { ws, peerId, joinedAt: Date.now(), role });
   ws.send(JSON.stringify({ type: "assigned", peerId, roomId, secure: room.secure }));
@@ -540,6 +622,18 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage, context: string) => {
           }
         }
         return;
+      }
+
+      // ── ws_pubkey relay guard (fix: WS-4 MITM injection) ─────────────────
+      // Only relay ws_pubkey when:
+      //   1. The room is in WS relay mode (ws_start was triggered)
+      //   2. This peer hasn't sent a ws_pubkey already (one key per peer per session)
+      // This prevents a rogue peer from injecting a fake public key to MITM
+      // the key exchange and impersonate the other party.
+      if (parsed.type === "ws_pubkey") {
+        if (!room.wsMode) return;                        // ignore outside relay mode
+        if (room.wsPubkeySent.has(peerId)) return;       // already sent — reject duplicate
+        room.wsPubkeySent.add(peerId);
       }
 
       // Generic relay (SDP, ICE, ws_pubkey, ws_msg, ws_bye, …)

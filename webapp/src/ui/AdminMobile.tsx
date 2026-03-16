@@ -878,7 +878,7 @@ interface ChatProps {
 }
 
 export function AdminChatMobile({ roomId, token, clientCode, clientLabel, secure, onBack }: ChatProps) {
-  const chat = useGhostChat(roomId, "admin");
+  const chat = useGhostChat(roomId, "admin", token);
   const [draft, setDraft] = useState("");
   const [copied, setCopied] = useState(false);
   const [showVerif, setShowVerif] = useState(true);

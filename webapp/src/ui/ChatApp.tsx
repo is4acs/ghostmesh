@@ -46,7 +46,7 @@ interface Props {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ChatApp({ roomId, role, secure, adminInfo, onBack }: Props) {
-  const chat         = useGhostChat(roomId, role);
+  const chat         = useGhostChat(roomId, role, adminInfo?.token ?? "");
   const [draft,      setDraft]      = useState("");
   const [copied,     setCopied]     = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
