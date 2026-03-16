@@ -442,8 +442,9 @@ const httpServer = createServer((req, res) => {
 
     // ── POST /client/join ─────────────────────────────────────────────────────
     if (req.method === "POST" && pathname === "/client/join") {
-      // Rate limit: 10 session creations per minute per IP
-      if (!rateAllow(`join:${clientIp(req)}`, 10, 60_000)) {
+      // Rate limit: 30 session creations per minute per IP
+      // (10 was too strict for legitimate rapid-fire use like admin testing)
+      if (!rateAllow(`join:${clientIp(req)}`, 30, 60_000)) {
         return json(429, { error: "too_many_requests" });
       }
       const body = await readBody(req) as { code?: string };
@@ -530,6 +531,19 @@ httpServer.on("upgrade", (req: IncomingMessage, socket, head) => {
   if (room.peers.size >= 2) {
     wss.handleUpgrade(req, socket, head, (ws) => ws.close(4008, "room_full"));
     return;
+  }
+
+  // ── MITM-C fix: second peer MUST be a verified admin ─────────────────────
+  // The first peer (client) connects freely using the room code they received.
+  // The second peer (admin) MUST supply the ADMIN_TOKEN — otherwise anyone who
+  // intercepts or guesses the roomId could occupy the admin slot and MITM the
+  // key exchange. Close code 4007 = "admin_auth_required".
+  if (room.peers.size === 1) {
+    const reqToken = url.searchParams.get("token") ?? "";
+    if (reqToken !== ADMIN_TOKEN) {
+      wss.handleUpgrade(req, socket, head, (ws) => ws.close(4007, "admin_auth_required"));
+      return;
+    }
   }
 
   wss.handleUpgrade(req, socket, head, (ws) => {

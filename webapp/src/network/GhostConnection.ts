@@ -126,6 +126,11 @@ export class GhostConnection {
         this.cb.onStatus("error");
         return;
       }
+      if (ev.code === 4007) {
+        this.cb.onError("Authentification admin requise — token invalide ou manquant");
+        this.cb.onStatus("error");
+        return;
+      }
       const established = this._wsMode ? !!this.secret : this.dc?.readyState === "open";
       if (!established && ev.code !== 1000 && !this.secret) this.cb.onStatus("error");
     };
